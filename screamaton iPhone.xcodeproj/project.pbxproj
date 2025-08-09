@@ -400,7 +400,7 @@
 				DEVELOPMENT_TEAM = 55Y67AB5N6;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = "Screamaton-9-Info.plist";
+				INFOPLIST_FILE = "Screamaton-iPhone-Info.plist";
 				INFOPLIST_KEY_LSApplicationCategoryType = "";
 				INFOPLIST_KEY_NSBluetoothAlwaysUsageDescription = "Cette app utilise le Bluetooth pour communiquer avec les appareils ESP32";
 				INFOPLIST_KEY_NSBluetoothPeripheralUsageDescription = "Cette app utilise le Bluetooth pour se connecter aux capteurs ESP32";
@@ -438,7 +438,7 @@
 				DEVELOPMENT_TEAM = 55Y67AB5N6;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = "Screamaton-9-Info.plist";
+				INFOPLIST_FILE = "Screamaton-iPhone-Info.plist";
 				INFOPLIST_KEY_LSApplicationCategoryType = "";
 				INFOPLIST_KEY_NSBluetoothAlwaysUsageDescription = "Cette app utilise le Bluetooth pour communiquer avec les appareils ESP32";
 				INFOPLIST_KEY_NSBluetoothPeripheralUsageDescription = "Cette app utilise le Bluetooth pour se connecter aux capteurs ESP32";
