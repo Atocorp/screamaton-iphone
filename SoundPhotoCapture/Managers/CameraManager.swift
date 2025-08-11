@@ -49,6 +49,18 @@ enum LensType: String, CaseIterable {
         }
     }
 }
+// MARK: - Enum pour position de caméra (NOUVEAU)
+enum CameraPosition: String, CaseIterable {
+    case back = "back"
+    case front = "front"
+    
+    var displayName: String {
+        switch self {
+        case .back: return "Arrière"
+        case .front: return "Frontale"
+        }
+    }
+}
 
 /// Gestionnaire pour la capture photo, traitement d'image et impression
 class CameraManager: NSObject, ObservableObject {
@@ -63,6 +75,21 @@ class CameraManager: NSObject, ObservableObject {
             saveLensPreference()
             if captureSession.isRunning {
                 switchLens(to: selectedLens)
+            }
+        }
+    }
+    @Published var cameraPosition: CameraPosition = .back {
+        didSet {
+            saveCameraPosition()
+            // NOUVEAU: Redémarrer la session si elle tourne
+            if captureSession.isRunning {
+                DispatchQueue.global(qos: .userInitiated).async {
+                    self.captureSession.stopRunning()
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                        self.setupCamera()
+                        self.startSession()
+                    }
+                }
             }
         }
     }
@@ -111,9 +138,21 @@ class CameraManager: NSObject, ObservableObject {
         // NOUVEAU: Charger préférences objectif et détecter disponibilité
         loadLensPreference()
         detectAvailableLenses()
+        loadCameraPosition()
         
         // 🆕 NOUVEAU: Charger les préférences de bande blanche
         loadBannerPreferences()
+    }
+    
+    private func saveCameraPosition() {
+        UserDefaults.standard.set(cameraPosition.rawValue, forKey: "selectedCameraPosition")
+    }
+
+    private func loadCameraPosition() {
+        if let savedPosition = UserDefaults.standard.string(forKey: "selectedCameraPosition"),
+           let position = CameraPosition(rawValue: savedPosition) {
+            cameraPosition = position
+        }
     }
     
     // 🆕 NOUVEAU: Charger les préférences de bande blanche
@@ -128,11 +167,15 @@ class CameraManager: NSObject, ObservableObject {
     private func detectAvailableLenses() {
         var lenses: [LensType] = []
         
+        // ✅ Utiliser la position configurée
+          let position: AVCaptureDevice.Position = cameraPosition == .back ? .back : .front
+          
+        
         for lensType in LensType.allCases {
-            if AVCaptureDevice.default(lensType.deviceType, for: .video, position: .back) != nil {
-                lenses.append(lensType)
+                if AVCaptureDevice.default(lensType.deviceType, for: .video, position: position) != nil {
+                    lenses.append(lensType)
+                }
             }
-        }
         
         DispatchQueue.main.async {
             self.availableLenses = lenses
@@ -146,10 +189,16 @@ class CameraManager: NSObject, ObservableObject {
     
     /// Change l'objectif de la caméra
     private func switchLens(to lensType: LensType) {
-        guard let device = AVCaptureDevice.default(lensType.deviceType, for: .video, position: .back) else {
-            print("❌ Objectif \(lensType.displayName) non disponible")
-            return
-        }
+        
+        // ✅ Utiliser la position de caméra configurée
+           let devicePosition: AVCaptureDevice.Position = cameraPosition == .back ? .back : .front
+           
+        
+        
+        guard let device = AVCaptureDevice.default(lensType.deviceType, for: .video, position: devicePosition) else {
+               print("❌ Objectif \(lensType.displayName) non disponible pour caméra \(cameraPosition.displayName)")
+               return
+           }
         
         captureSession.beginConfiguration()
         
@@ -438,11 +487,14 @@ class CameraManager: NSObject, ObservableObject {
         
         captureSession.beginConfiguration()
         
-        // MODIFIÉ: Configuration avec l'objectif sélectionné
-        guard let camera = AVCaptureDevice.default(selectedLens.deviceType, for: .video, position: .back),
+        // MODIFIÉ: Configuration avec l'objectif sélectionné ET position caméra
+        let devicePosition: AVCaptureDevice.Position = self.cameraPosition == .back ? .back : .front
+        print("🎯 Configuration caméra: \(self.cameraPosition) -> position: \(devicePosition)")
+
+        guard let camera = AVCaptureDevice.default(selectedLens.deviceType, for: .video, position: devicePosition),
               let input = try? AVCaptureDeviceInput(device: camera) else {
             // Fallback vers Wide si l'objectif sélectionné n'est pas disponible
-            guard let fallbackCamera = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .back),
+            guard let fallbackCamera = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: devicePosition),
                   let fallbackInput = try? AVCaptureDeviceInput(device: fallbackCamera) else {
                 captureSession.commitConfiguration()
                 return

@@ -447,7 +447,9 @@ struct ContentView: View {
     func getCurrentPrinter() -> (slot: String, url: URL) {
         let assigned = getAssignedPrinters()
         if assigned.isEmpty {
-            return (slot: "Aucune", url: URL(string: "")!)
+            // URL valide par défaut
+            let defaultURL = URL(string: "http://localhost")!
+            return (slot: "Aucune", url: defaultURL)
         }
         return assigned[currentPrinterIndex % assigned.count]
     }
@@ -711,6 +713,17 @@ struct ContentView: View {
 
         // Obtenir l'imprimante courante
         let currentPrinter = getCurrentPrinter()
+        
+        // ✅ Vérification de sécurité
+           guard currentPrinter.slot != "Aucune" else {
+               print("❌ Aucune imprimante configurée")
+               // Capturer sans imprimer
+               cameraManager.capturePhoto(useFlash: useFlash, useTorch: useTorch) { success in
+                   // gérer le succès
+               }
+               return
+           }
+        
         
         // 🆕 Synchroniser les paramètres réseau avec CameraManager
         cameraManager.networkSendingEnabled = networkSendingEnabled

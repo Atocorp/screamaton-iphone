@@ -1,6 +1,6 @@
 //
 //  PhotoSettingsView.swift
-//  Screamaton 9
+//  Screamaton iPhone
 //
 //  Created by antonin Fourneau on 17/06/2025.
 //
@@ -17,18 +17,80 @@ struct PhotoSettingsView: View {
     
     @State private var tempFlashMode: Int = 0
     @State private var tempSelectedLens: LensType = .wide
+    @State private var tempCameraPosition: CameraPosition = .back // NOUVEAU: Position de la caméra
     
     var body: some View {
         NavigationView {
             VStack(spacing: 20) {
-                Text("Réglages Photo")
+                Text("Photo Settings")
                     .font(.title2)
                     .fontWeight(.bold)
                     .padding(.top)
                 
-                // NOUVEAU: Sélecteur d'objectif
+                // NOUVEAU: Sélecteur de position de caméra
                 VStack(spacing: 12) {
-                    Text("Objectif de la caméra")
+                    Text("Position camera")
+                        .font(.headline)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    
+                    HStack(spacing: 10) {
+                        // Caméra arrière
+                        Button(action: {
+                            tempCameraPosition = .back
+                        }) {
+                            VStack(spacing: 8) {
+                                Image(systemName: "camera")
+                                    .font(.title2)
+                                    .foregroundColor(tempCameraPosition == .back ? .white : .blue)
+                                
+                                Text("BACK")
+                                    .font(.caption)
+                                    .foregroundColor(tempCameraPosition == .back ? .white : .primary)
+                            }
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 12)
+                            .background(
+                                RoundedRectangle(cornerRadius: 8)
+                                    .fill(tempCameraPosition == .back ? Color.blue : Color.gray.opacity(0.2))
+                            )
+                        }
+                        .buttonStyle(PlainButtonStyle())
+                        
+                        // Caméra frontale
+                        Button(action: {
+                            tempCameraPosition = .front
+                        }) {
+                            VStack(spacing: 8) {
+                                Image(systemName: "camera.rotate")
+                                    .font(.title2)
+                                    .foregroundColor(tempCameraPosition == .front ? .white : .blue)
+                                
+                                Text("FrontCam")
+                                    .font(.caption)
+                                    .foregroundColor(tempCameraPosition == .front ? .white : .primary)
+                            }
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 12)
+                            .background(
+                                RoundedRectangle(cornerRadius: 8)
+                                    .fill(tempCameraPosition == .front ? Color.blue : Color.gray.opacity(0.2))
+                            )
+                        }
+                        .buttonStyle(PlainButtonStyle())
+                    }
+                    
+                    Text(cameraPositionDescription(tempCameraPosition))
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .multilineTextAlignment(.center)
+                }
+                .padding()
+                .background(Color.gray.opacity(0.1))
+                .cornerRadius(10)
+                
+                // Sélecteur d'objectif (disponible pour toutes les caméras)
+                VStack(spacing: 12) {
+                    Text("Camera Lens")
                         .font(.headline)
                         .frame(maxWidth: .infinity, alignment: .leading)
                     
@@ -59,7 +121,7 @@ struct PhotoSettingsView: View {
                             }
                         }
                     } else {
-                        Text("📱 Cet appareil ne dispose que d'un seul objectif")
+                        Text("this phone has only one lens")
                             .font(.caption)
                             .foregroundColor(.secondary)
                             .frame(maxWidth: .infinity, alignment: .center)
@@ -77,16 +139,16 @@ struct PhotoSettingsView: View {
                 .background(Color.gray.opacity(0.1))
                 .cornerRadius(10)
                 
-                // Mode de flash
+                // Mode de flash (même options pour toutes les caméras)
                 VStack(spacing: 12) {
-                    Text("Mode de lumière")
+                    Text("Light Mode")
                         .font(.headline)
                         .frame(maxWidth: .infinity, alignment: .leading)
                     
-                    Picker("Mode de lumière", selection: $tempFlashMode) {
-                        Text("Aucun").tag(0)
-                        Text("Flash photo").tag(1)
-                        Text("Torche 1s").tag(2)
+                    Picker("Light", selection: $tempFlashMode) {
+                        Text("No").tag(0)
+                        Text("Flash").tag(1)
+                        Text("light 1s").tag(2)
                     }
                     .pickerStyle(SegmentedPickerStyle())
                     
@@ -99,24 +161,35 @@ struct PhotoSettingsView: View {
                 .background(Color.gray.opacity(0.1))
                 .cornerRadius(10)
                 
-              
                 Spacer()
             }
             .padding()
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Annuler") {
+                    Button("Cancel") {
                         dismiss()
                     }
                 }
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Sauvegarder") {
+                    Button("Save") {
                         // Sauvegarder le mode flash
                         flashModeSelection = tempFlashMode
                         
                         // Sauvegarder l'objectif sélectionné
                         cameraManager.selectedLens = tempSelectedLens
+                        
+                        // NOUVEAU: Sauvegarder la position de caméra
+                        cameraManager.cameraPosition = tempCameraPosition
+                        
+                        
+                        // NOUVEAU: Redémarrer la session caméra
+                            if cameraManager.isSessionRunning {
+                                cameraManager.stopSession()
+                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                                    cameraManager.startSession()
+                                }
+                            }
                         
                         dismiss()
                     }
@@ -127,14 +200,15 @@ struct PhotoSettingsView: View {
         .onAppear {
             tempFlashMode = flashModeSelection
             tempSelectedLens = cameraManager.selectedLens
+            tempCameraPosition = cameraManager.cameraPosition // NOUVEAU
         }
     }
     
     func flashModeDescription(_ mode: Int) -> String {
         switch mode {
-        case 0: return "Pas d'éclairage supplémentaire"
-        case 1: return "Flash automatique au moment de la photo"
-        case 2: return "Torche allumée pendant 1 seconde"
+        case 0: return "No light"
+        case 1: return "Flash auto "
+        case 2: return "Torch light during 1 sec"
         default: return ""
         }
     }
@@ -142,14 +216,25 @@ struct PhotoSettingsView: View {
     func lensDescription(_ lens: LensType) -> String {
         switch lens {
         case .wide:
-            return "Objectif principal pour photos standard"
+            return "main lens"
         case .ultraWide:
-            return "Grand angle pour capturer plus de scène"
+            return "large"
         case .telephoto:
-            return "Zoom optique pour photos rapprochées"
+            return "Zoom "
+        }
+    }
+    
+    func cameraPositionDescription(_ position: CameraPosition) -> String {
+        switch position {
+        case .back:
+            return "Back Cam "
+        case .front:
+            return "Front Cam  -  selfies"
         }
     }
 }
+
+
 
 #Preview {
     @State var flashMode = 1
